@@ -40,12 +40,6 @@ struct HashMap* new_hashmap_default(HashFunction hfunc, CompareFunction cfunc, s
 		// Initialise each bucket.
 		initBuckets(hmap, buckets);
 
-		/*
-		for (size_t i = 0; i < buckets; i++) {
-			hmap->buckets[i] = NULL;
-		}
-		*/
-		
 		return hmap;
 }
 
@@ -55,32 +49,43 @@ void free_hashmap(struct HashMap* hmap) {
 }
 
 void insert_hashmap(struct HashMap* hmap, int key, void* value) {
+	// Compute the bucket index based on the hashfunction.
 	size_t hashed_key = hmap->hfunc(key);
+	// Get the item at the index.
+	struct HashMapItem* item = hmap->buckets[hashed_key];
 	struct HashMapItem* prev = NULL;
-	struct HashMapItem* entry = hmap->buckets[hashed_key];
 
-	while (entry != NULL) {
-		if (hmap->cfunc(entry->key, key)) {
-			prev = entry;
+	// If the item is occupied, check if any of the 'nexts' equal
+	// the current item key.
+	while (item != NULL) {
+		if (hmap->cfunc(item->key, key)) {
+			prev = item;
 			break;
 		}
+		item = item->next;
 	}
 
-	if (entry == 0) {
-		entry = (struct HashMapItem*) malloc(sizeof(struct HashMapItem));
 
-		entry->hash_id = hashed_key;
-		entry->key = key;
-		entry->value = value;
-		entry->next = NULL;
-		
+	if (item == 0) {
+		item = (struct HashMapItem*) malloc(sizeof(struct HashMapItem));
+		item->hash_id = hashed_key;
+		item->key = key;
+		item->value = value;
+		item->next = NULL;
+	
+		// If there is no previous item, this item is the first
+		// with this hashed_key,
 		if (prev == NULL) {
-			hmap->buckets[hashed_key] = entry;
+			hmap->buckets[hashed_key] = item;
 		} else {
-			prev->next = entry;
+			// There is a previous item with this hashed_key.
+			// Set the previous item to point to this new item.
+			prev->next = item;
 		}
 	} else {
-		entry->value = value;
+		// Item already exists.
+		// Only update the value.
+		item->value = value;
 	}
 }
 
