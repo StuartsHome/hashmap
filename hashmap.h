@@ -1,28 +1,30 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-typedef size_t (*HashFunction)(void*);
-typedef bool (*CompareFunction)(void*, void*);
+typedef size_t (*HashFunction)(int);
+typedef bool (*CompareFunction)(int, int);
 
-struct Pair {
-	size_t hash_id;
-	void* key;
-	void* value;
-	struct Pair* next;
+struct HashMapItem {
+	size_t 				hash_id;
+	int 				key;
+	void* 				value;
+	struct HashMapItem* next;
 };
 
 struct HashMap {
-	struct Pair** buckets;
-	size_t num_buckets;
-	HashFunction hfunc;
-	CompareFunction cfunc;
+	struct HashMapItem** 	buckets;
+	size_t        			num_buckets;
+	HashFunction			hfunc;
+	CompareFunction 		cfunc;
 };
 
 struct HashMap* new_hashmap(HashFunction, CompareFunction);
-struct HashMap* new_hashmap_c(HashFunction, CompareFunction, size_t);
+struct HashMap* new_hashmap_default(HashFunction, CompareFunction, size_t);
 
-void free_hashmap(struct HashMap*);
-void* get_hashmap(struct HashMap*, void*);
-void remove_hashmap(struct HashMap*, void*);
-void print_hashmap(struct HashMap*);
+void  free_hashmap(struct HashMap*);
+void  insert_hashmap(struct HashMap* hmap, int key, void* value);
+void* get_hashmap(struct HashMap*, int);
+void  remove_hashmap(struct HashMap*, int);
+void  print_hashmap(struct HashMap*);
+int   get_size_hashmap(struct HashMap*);
 

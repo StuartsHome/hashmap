@@ -1,6 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include "hashmap.h"
+#include <stdbool.h>
 
 // Robin Hood hashing.
 // The variance of the key distances from their 'home' slots is minimised.
@@ -10,30 +13,38 @@
 //
 //
 
-#define DEFAULT_BUCKETS 750000
+#define DEFAULT_BUCKETS 32
 
 struct HashMap* new_hashmap(HashFunction hfunc, CompareFunction cfunc) {
-		return new_hashmap_c(hfunc, cfunc, DEFAULT_BUCKETS);
+		return new_hashmap_default(hfunc, cfunc, DEFAULT_BUCKETS);
 }
 
-struct HashMap* new_hashmap_c(
-				HashFunction hfunc,
-				CompareFunction cfunc,
-				size_t buckets) {
+void initBuckets(struct HashMap* map, size_t num_buckets) {
+	for (size_t i = 0; i < num_buckets; i++) {
+		map->buckets[i] = NULL;
+	}
+}
+
+struct HashMap* new_hashmap_default(HashFunction hfunc, CompareFunction cfunc, size_t buckets) {
 		struct HashMap* hmap;
 		hmap = malloc(sizeof(*hmap));
 		assert(hmap);
 
-		hmap->buckets = malloc(buckets * sizeof(*hmap->buckets));
+		hmap->buckets = malloc(buckets* sizeof(*hmap->buckets));
 		hmap->num_buckets = buckets;
 		hmap->hfunc = hfunc;
 		hmap->cfunc = cfunc;
 
 		assert(hmap->buckets);
 
+		// Initialise each bucket.
+		initBuckets(hmap, buckets);
+
+		/*
 		for (size_t i = 0; i < buckets; i++) {
 			hmap->buckets[i] = NULL;
 		}
+		*/
 		
 		return hmap;
 }
@@ -41,13 +52,12 @@ struct HashMap* new_hashmap_c(
 void free_hashmap(struct HashMap* hmap) {
 	free(hmap->buckets);
 	free(hmap);
-	hmap = NULL;
 }
 
-void insert_hashmap(struct HashMap* hmap, void* key, void* value) {
+void insert_hashmap(struct HashMap* hmap, int key, void* value) {
 	size_t hashed_key = hmap->hfunc(key);
-	struct Pair* prev = NULL;
-	struct Pair* entry = hmap->buckets[hashed_key];
+	struct HashMapItem* prev = NULL;
+	struct HashMapItem* entry = hmap->buckets[hashed_key];
 
 	while (entry != NULL) {
 		if (hmap->cfunc(entry->key, key)) {
@@ -56,8 +66,9 @@ void insert_hashmap(struct HashMap* hmap, void* key, void* value) {
 		}
 	}
 
-	if (entry == NULL) {
-		entry = malloc(sizeof(struct Pair));
+	if (entry == 0) {
+		entry = (struct HashMapItem*) malloc(sizeof(struct HashMapItem));
+
 		entry->hash_id = hashed_key;
 		entry->key = key;
 		entry->value = value;
@@ -73,9 +84,9 @@ void insert_hashmap(struct HashMap* hmap, void* key, void* value) {
 	}
 }
 
-void * get_hashmap(struct HashMap* hmap, void* key) {
+void * get_hashmap(struct HashMap* hmap, int key) {
 	size_t hashed_key = hmap->hfunc(key);
-	struct Pair* entry = hmap->buckets[hashed_key];
+	struct HashMapItem* entry = hmap->buckets[hashed_key];
 
 	while (entry != NULL) {
 		if (hmap->cfunc(entry->key, key)) return entry->value;
@@ -84,10 +95,10 @@ void * get_hashmap(struct HashMap* hmap, void* key) {
 	return NULL;
 }
 
-void remove_hashmap(struct HashMap* map, void* key) {
+void remove_hashmap(struct HashMap* map, int key) {
 	size_t hashed_key = map->hfunc(key);
-	struct Pair* prev = NULL;
-	struct Pair* entry = map->buckets[hashed_key];
+	struct HashMapItem* prev = NULL;
+	struct HashMapItem* entry = map->buckets[hashed_key];
 		
 	while (entry != NULL) {
 		if (map->cfunc(entry->key, key)) {
@@ -107,13 +118,28 @@ void remove_hashmap(struct HashMap* map, void* key) {
 	map->buckets[hashed_key] = NULL;
 }
 
+int get_size_hashmap(struct HashMap* map) {
+	// Iterate over every bucket.
+	int count = 0;
+	for (size_t i = 0; i < DEFAULT_BUCKETS; i++) {
+		struct HashMapItem* entry = map->buckets[i];
+
+		while (entry != NULL) {
+			count++;
+			entry = entry->next;
+		}
+	}	
+
+	return count;
+}
+
 void print_hashmap(struct HashMap* map) {
 	for (size_t i = 0; i < DEFAULT_BUCKETS; i++) {
-		struct Pair* entry = map->buckets[i];
+		struct HashMapItem* entry = map->buckets[i];
 		
 		while (entry != NULL) {
-			printf("%d\n", *(int *)entry->value);
 			entry = entry->next;
 		}
 	}	
 }
+
